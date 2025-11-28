@@ -1,0 +1,6 @@
+user
+nmsfadmin
+nadmin
+root
+msfadmin
+admin
