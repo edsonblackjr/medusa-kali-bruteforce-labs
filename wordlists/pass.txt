@@ -1,0 +1,11 @@
+123456
+password
+passw0rd
+admin
+Admin
+ADMIN
+admin123
+msfadmin
+toor
+root
+root123
